@@ -23,6 +23,14 @@ Table of content
       - [Operand Stack](#operand-stack)
       - [Frame data](#frame-data)
     - [Method execution example](#method-execution-example)
+    - [Method's parameters passing](#methods-parameters-passing)
+  - [String class in Memory - String pool](#string-class-in-memory---string-pool)
+    - [String interning](#string-interning)
+  - [Garbage Collection](#garbage-collection)
+    - [Performance Metrics targeted by GC algorithms](#performance-metrics-targeted-by-gc-algorithms)
+    - [Stop the world event - STW](#stop-the-world-event---stw)
+    - [GC Algorithms](#gc-algorithms)
+    - [The Garbage First G1 Garbage collector](#the-garbage-first-g1-garbage-collector)
 
 Links
 
@@ -469,3 +477,150 @@ class Example3c {
 The virtual machine allocates enough memory for the `addTwoTypes()` frame from a heap. It then pops the double and int parameters (88.88 and 1) from `addAndPrint()`'s operand stack and places them into `addTwoType()`'s local variable slots one and zero.
 
 When `addTwoTypes()` returns, it first **pushes the double return value** (in this case, 89.88) **onto its operand stack**. The virtual machine uses the information in the frame data to locate the stack frame of the invoking method, `addAndPrint()`. It pushes the double return value onto `addAndPrint()`'s operand stack and frees the memory occupied by `addTwoType()`'s frame. It makes `addAndPrint()`'s frame current and continues executing the `addAndPrint()` method at the first instruction past the `addTwoType()` method invocation (the PC points to the offset of the method instruction).
+
+### Method's parameters passing
+
+Java always passes parameter to method **by value**. In case of primitive variables the “value” is the value itself, so if we modify it into the method, the variable will change outside. If the parameter passed is an object instance, the value is the memory reference, i.e. a location memory in heap containing the instance. So, the “value” is the target of the reference, even if the reference passed to the method is a copy of the original calling code. 
+
+<img src="image/Java_memory_management/parameter_by_value.png" width=500>
+
+The output of this program is 
+
+```
+red 
+green
+```
+
+## String class in Memory - String pool
+
+String in Java is part of language, hence is present in `java.lang` package. Internally is stored in an **array of chars**. JVM treats String in special way: it can be instantiate by new operator o directly between `""`. 
+
+Every instantiated class is stored in a dedicated location in **memory pool**, because it’s ***IMMUTABLE***:  
+
+Every method that manipulates strings, internally creates a copy of input string. 
+
+Immutable objects are **thread safe** (no need of locking) 
+
+### String interning 
+
+Every time JVM loads a class, **every string literal is stored in the String pool** this operation is called *interning*. All repetition of the same literal in the code is referred to the same location in the pool because JVM automatically intern Strings. So, every thread access the string literal is sure to read always the same value, one of the reason why strings are immutable.  
+
+String pool contains string literals stored in **compile-time** by JVM. Even in run-time we can intern strings with intern() method. While executing a program we can intern a list of string when we now this list stores a lot of string repetitions: all this repetition will be referenced to the same pool location (**PermGen**).  **If you create a string with the new operator an heap variable will be created, different from pool**. 
+
+This operation will make `equals()` faster and `==` operator returns true. 
+
+On the contrary, we must be aware that string pool is limited memory over the heap.  
+
+The `intern()` method lookups the string in the pool. If an equal string is found it’s returned, if not found is created in the pool for future references. 
+```java
+aString = "A String"; //string literal interned by JVM `
+
+String aConcatentatedString = "A" + " " + "String"; //concatenation of compile-time string pool literals
+
+aString == aConcatentatedString : true //referred to the same location in pool
+
+aString.equals(aConcatentatedString) : true
+```
+ <hr>
+
+```java
+private static char[] chars = {'A', ' ', 'S', 't', 'r', 'i', 'n', 'g'}; 
+String aRuntimeString = new String(chars); //not interned by JVM , new operator 
+aString == aRuntimeString : false 
+aString.equals(aRuntimeString) : true 
+String anInternedString = aRuntimeString.intern(); //interned string 
+aString == anInternedString : true //because of the interned string 
+aString.equals(anInternedString) : true 
+
+ ```
+<hr>
+
+```java
+String anExplicitString = new String("A String"); //not interned for new operator (stored in heap) 
+aString == anExplicitString : false 
+aString.equals(anExplicitString) : true
+
+String firstArg = args[0]; //main argument, runtime string not interned 
+aString == firstArg : false 
+aString.equals(firstArg) : true 
+String firstArgInterned = firstArg.intern(); //once interned string are == 
+aString == anInternedString : true //because of the interned string 
+aString.equals(anInternedString) : true 
+```
+## Garbage Collection 
+
+Garbage collection is an automatic process running concurrently (in background) with the application. It represents a big advantage for using Java because memory allocation and deallocation in other languages, such as C, is manual. Its main task is to check if objects in memory are referenced in some execution point of the application and then delete unreferenced objects to claim memory space for future object allocation. 
+
+### Performance Metrics targeted by GC algorithms
+* **Throughput**: is the amount of work that can be done in a specified time unit. The GC algorithm which does more work in short time is preferable.
+* **Latency**: is the time taken for a request to complete. The GC algorithm would try to make as little pauses as possible for Garbage collection so that the request doesn’t have to wait for garbage collection i.e. GC algorithm will not make any request/operation wait, it will try to complete the operation as fast as possible
+* **Memory Footprint**: is the memory needed by a GC process for it to execute smoothly. If GC algo takes more memory, it means that we have less memory available for Heap.
+
+These three metrics are interconnected and every GC algorithm occupies a specific poing in the following area
+
+<div>
+<img style="text-align:center" src="image/Java_memory_management/gc_metrics.png" width=300>
+</div>
+
+ ### Stop the world event - STW 
+
+Every kind of GC triggers a “Stop the world event”: every application’s thread hang on until garbage collection completes. Since Minor GC analyzes short-live object, it’s very fast and doesn’t affect application performance, but Major GC checks all live object and can tank longer execution time. Because of STW event, Major GC can make application unresponsive for a sensible period, with possible timeout errors.  
+
+Performance of major gc depends on the chosen strategy and relative tuning, so it’s very important for big data and interactive applications to pay attention to garbage collection settings. 
+
+A really basic garbag collection approach has three steps: 
+
+* **Mark** - identifies and mark objects in use (**referenced by stack calls**) 
+
+* **Normal Deletion** - gc deletes unmarked objects to reclaim free space 
+
+* **Delection with compacting** - all undeleted objects are stored together to reduce memory fragmentation and gain better performance. 
+
+The separation between young and old generation memories allows a hierarchical approach for gc implementation divided into **Minor** and **Major** gc depending on the assumption that every new objects are most likely unused in the future and long lived objects are most likely to be in use in future calls.
+
+### GC Algorithms
+
+| Garbage collector                        | Focus area                 | Concepts                                                                       |
+|------------------------------------------|----------------------------|--------------------------------------------------------------------------------|
+| **Parallel** *-XX:+UseParallelGC*                                | Throughput                 | Multithreaded stop-the-world (STW) compaction and generational collection. It spawns N threads for **MinorGC** (N=n° cpu cores). **Major GC** use a single thread.  You can change the number of threads through JVM setting `-XX:ParallelGCThreads=n`      |
+| **Garbage First (G1)** *-XX:+UseG1GC*                      | Balanced performance       | Multithreaded STW compaction, concurrent liveness, and generational collection. In **GraalVm** it can be used in Linux but not in the community edition  |
+| **Z Garbage Collector** (**ZGC**) *-XX:+UseZGC* (since JDK 15) | Latency                    | The Z Garbage Collector (ZGC) is a scalable low latency garbage collector. ZGC performs all expensive work concurrently, without stopping the execution of application threads for more than a few milliseconds. It is suitable for applications which require low latency. Pause times are independent of heap size that is being used. ZGC supports heap sizes from 8MB to 16TB. Since ZGC is a concurrent collector a max heap size must be selected such that, <br>1) the heap can accommodate the live-set of your application, and <br> 2) there is enough headroom in the heap to allow allocations to be serviced while the GC is running. How much headroom is needed very much depends on the allocation rate and the live-set size of the application. In general, the more memory you give to ZGC the better. But at the same time, wasting memory is undesirable, so it’s all about finding a balance between memory usage and how often the GC needs to run.                                      |
+| **Shenandoah** (since JDK 12)   **EXPERIMENTAL**             | Latency                    | Shenandoah is the low pause time garbage collector that reduces GC pause times by performing more garbage collection work concurrently with the running Java program. Shenandoah does the bulk of GC work concurrently, including the concurrent compaction, which means its pause times are no longer directly proportional to the size of the heap. Garbage collecting a 200 GB heap or a 2 GB heap should have the similar low pause behavior. https://www.baeldung.com/jvm-experimental-garbage-collectors      |
+| **Serial** *-XX:+UseSerialGc*                                  | Footprint and startup time | Single-threaded STW compaction and generational collection. In **GraalVM** it is the **default** GC algorithm                    |
+|**Epsilon** (since Java 11)| Latency| Epsilon is basically a passive or “**no-op**” collector, which means that it handles memory allocation but **doesn’t recycle it**! So, **when the heap runs out of memory, the JVM simply shuts down**. Basically, any garbage collector has an indirect impact on the performance of the user program. It’s very difficult to benchmark an application and understand the impact of garbage collection on it. Epsilon serves exactly that purpose. It simply removes the impact of a garbage collector and **lets us run the application in isolation**. But, this expects us to have a very clear understanding of the memory requirements of our application. Consequently, we can achieve better performance from the application. |
+
+### The Garbage First G1 Garbage collector
+
+It was introduced by Java 7 in order to replace CMS. G1 is *parallel concurrent and incrementally compacting* low-pause garbage collector. It operates differently from others gc implementations. It divides all heap memory in multiple same size regions. When it’s invoked, it first apply to the region with less live data (hence “Garbage First”)
+
+
+| The heap structure |  |
+|---|---|
+| G1 splits the heap into many (~ 2k varying in size from 1 to 32Mb) memory areas to store all generations of objects | <img style="text-align:center" src="image/Java_memory_management/g1_gc_01.PNG" width=100> |
+
+
+| The heap allocation |  |
+|---|---|
+| Each region has a role assigned (Eden, Survivor or Old). Live objects are evacuated (i.e., copied or moved) from one region to another. Regions are designed to be collected in parallel with or without stopping all other application threads. | <img style="text-align:center" src="image/Java_memory_management/g1_gc_02.PNG" width=500> |
+
+| Youg Generation GC |  |
+|---|---|
+| Live objects are evacuated (i.e., copied or moved) to one or more survivor regions (from green to dark green). If the aging threshold is met, some of the objects are promoted to old generation regions. This is a **stop the world (STW)** pause, done in **parallel using multiple threads**. Eden size and survivor size is calculated for the next young GC.| <img style="text-align:center" src="image/Java_memory_management/g1_gc_03.PNG" width=500> |
+
+
+| Old Generation GC Phases: | Initial Marking Phase |
+|---|---|
+| This is a **stop the world event**. With G1, it is **done with a normal young GC**. Mark survivor regions (root regions) which **may** have references to objects in old generation. Then, it **scan survivor regions for references into the old generation**. This happens while **the application continues to run**. The phase must be completed before a young GC can occur. In the logs: `pause (young)(inital-mark)`| <img style="text-align:center" src="image/Java_memory_management/g1_gc_04.PNG" width=500> |
+
+| Old Generation GC Phases: | Concurrent Marking Phase |
+|---|---|
+| **Find live objects over the entire heap**. This happens **while the application is running**. This phase **can be interrupted by young generation gc**. Empty regions (as denoted by the "X") are also marked , they are removed immediately in the Remark phase. Also, "**accounting**" information that determines liveness is calculated. | <img style="text-align:center" src="image/Java_memory_management/g1_gc_05.PNG" width=500> |
+
+| Old Generation GC Phases: | Remark Phase |
+|---|---|
+| Completes the **marking of live objects in the heap** with a **STW**. **Empty regions** are removed and reclaimed. Region liveness is now calculated for all regions. | <img style="text-align:center" src="image/Java_memory_management/g1_gc_06.PNG" width=300> |
+
+| Old Generation GC Phases: | Cleanup Phase |
+|---|---|
+| 1) Selects the regions with the lowest "liveness", those regions which can be collected the fastest (**garbage first**). (Stop the world) <br> 2) Then those regions are collected at the same time as a young GC. So both young and old generations are collected at the same time. (Stop the world) <br> 3) Reset the empty regions and return them to the free list. (Concurrent) <br> This is denoted in the logs as [`GC pause (mixed)`]. <br> The regions selected have been collected and compacted into the dark blue region and the dark green region shown in the diagram.| <img style="text-align:center" src="image/Java_memory_management/g1_gc_07.PNG" width=300> |
+
