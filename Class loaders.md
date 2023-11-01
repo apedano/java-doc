@@ -1,6 +1,14 @@
 # Class loaders in Java
+
 - [Class loaders in Java](#class-loaders-in-java)
   - [The classloader subsystem](#the-classloader-subsystem)
+    - [Loading (Method area and Class instance in the heap)](#loading-method-area-and-class-instance-in-the-heap)
+    - [Linking](#linking)
+      - [Verification (.class corretness)](#verification-class-corretness)
+      - [Preparation (static initialization - defalt values)](#preparation-static-initialization---defalt-values)
+      - [Resolution (symbolic links resolution and verification)](#resolution-symbolic-links-resolution-and-verification)
+    - [Initialization](#initialization)
+  - [The class loader principles](#the-class-loader-principles)
     - [Delegation hierarchy principle](#delegation-hierarchy-principle)
     - [Visibility principle](#visibility-principle)
     - [Uniqueness principle](#uniqueness-principle)
@@ -22,6 +30,65 @@
 ## The classloader subsystem
 
 The classloader subsystem is an abstract class (`java.lang.class`) and is used for **loading, linking, and initialization** of the `.class` files(byte codes) into the *JVM Memory(Method area)* subsystem at **run-time**.
+
+<img src="image/class_loaders/jvm_architecture.png" width=600>
+
+### Loading (Method area and Class instance in the heap)
+
+The Class loader reads the `.class` file, generate the corresponding binary data and save it in the **method area** (the content of the class described in the memory management).
+
+After loading the `.class` file, JVM creates an object of type `Class` **to represent this file in the heap memory**. Please note that this object is of type `Class` predefined in `java.lang` package. These `Class` object can be used by the programmer for getting class level information like the name of the class, parent name, methods and variable information etc. To get this object reference we can use `getClass()` method of Object class.
+
+### Linking
+
+Performs verification, preparation, and (optionally) resolution. 
+
+#### Verification (.class corretness)
+Checks that the loaded representation of a class is well-formed, with a proper symbol table. It also checks that the code that implements the class obeys the semantic requirements of the Java programming languague and the JVM. For example, it checks that every instruction has a valid operation code; that every branch instruction branches to the start of some other instruction, rather than into the middle of an instruction; that every method has a correct signature.
+
+If verification fails, we get run-time exception `java.lang.VerifyError`. This activity is done by the component `ByteCodeVerifier`. Once this activity is completed then the class file is ready for compilation.
+
+#### Preparation (static initialization - defalt values)
+
+Involves creating the `static` fields (**class variables and constants**) for a class or interface and **initializings such fields to the default values**. This involves allocation of static storage and any data structures that are used internally by the implementation of the JVM, such as method tables.
+
+#### Resolution (symbolic links resolution and verification)
+
+It is the process of **checking symbolic references** from a class to other classes and interfaces, by **loading the other classes and interfaces that are mentioned**, and **checking that the references are correct**.
+
+### Initialization
+
+Initialization of a class consists of executing its **static initializers** and the **initializers for static fields** (class variables) declared in the class. The static initializers are executed in the order that they appear in the source code as shown in the code: when the JVM initializes the `Main` class, it first initializes all of its superclasses, starting with `Object`. Since `Object` has no superclass, the recursion stops there. 
+Then, the JVM initializes Main by executing the class variable initializers and static initializers in the order that they appear in the source code.
+
+```java
+class Main extends Object {
+  // Class variable initializers and static initializers are executed in this order
+  static int x = 1;  // Initializer for static field x - executed first
+  static int y;  // No initializer for static field y - executed second
+  // Static initializer
+  static {
+    y = x + 1; //executed third
+  }
+  static int z = x + y;  // Initializer for static field z - executed fourth
+  public static void main(String[] args) {
+    // Main method is executed after the class is initialized
+  }
+}
+```
+
+In general, initialization of a class or interface `T` occurs when any of the following circumstances occurs:
+
+* An instance of `T` is created
+* A static method of `T` is invoked
+* A static field of `T` is assigned
+* A static field of `T` is used and the field is not a constant field
+
+Also note that invocation of a method in a class via reflection causes initialization of the class
+Once all classes are initialized, the JVM proceeds to instantiate the classes.
+
+
+## The class loader principles
 
 Java ClassLoader is followed by three basic principles:
 
@@ -76,7 +143,6 @@ protected Class<?> loadClass(String name)
                     // ClassNotFoundException thrown if class not found
                     // from the non-null parent class loader
                 }
-
                 if (c == null) {
                     // If still not found, then invoke findClass in order
                     // to find the class.
@@ -90,7 +156,7 @@ protected Class<?> loadClass(String name)
 
 ### `loadClass(String name)`
 
-Loads a class with the specified name. It first checks if the class has already been loaded, and if not, it delegates the loading of the class to the parent class loader. 
+Loads a class with the specified name. It first checks if the class has already been loaded, and if not, it delegates the loading of the class to the parent class loader.
 
 ### `findClass(String name)`
 
@@ -220,4 +286,3 @@ public class CustomClassLoader extends ClassLoader {
     } 
 } 
 ```
-

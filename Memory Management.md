@@ -4,6 +4,7 @@
 
 - [Java Memory management](#java-memory-management)
   - [Table of content](#table-of-content)
+  - [Runtime data areas](#runtime-data-areas)
   - [JVM Memory Structure](#jvm-memory-structure)
   - [Young generation memory - MinorGC](#young-generation-memory---minorgc)
   - [Old generation memory (tenured) - MajorGC](#old-generation-memory-tenured---majorgc)
@@ -37,6 +38,9 @@ Java Memory Management is divided into two major part :
 
 * **JVM Memory Structure**
 * **Working of the Garbage Collector**
+## Runtime data areas
+
+![Alt text](image/compilation/jvm_architecture.png)
 
 ## JVM Memory Structure
 
