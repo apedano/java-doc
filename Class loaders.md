@@ -40,7 +40,7 @@ The Class loader reads the `.class` file, generate the corresponding binary data
 After loading the `.class` file, JVM creates an object of type `Class` **to represent this file in the heap memory**. Please note that this object is of type `Class` predefined in `java.lang` package. These `Class` object can be used by the programmer for getting class level information like the name of the class, parent name, methods and variable information etc. To get this object reference we can use `getClass()` method of Object class.
 
 ### Linking
-
+Linking refers to the process of **taking a binary form of a class** or interface and **combining it into the runtime state of the JVM**, so that it can be executed. 
 Performs verification, preparation, and (optionally) resolution. 
 
 #### Verification (.class corretness)
@@ -86,7 +86,6 @@ In general, initialization of a class or interface `T` occurs when any of the fo
 
 Also note that invocation of a method in a class via reflection causes initialization of the class
 Once all classes are initialized, the JVM proceeds to instantiate the classes.
-
 
 ## The class loader principles
 
