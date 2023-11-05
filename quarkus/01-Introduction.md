@@ -34,3 +34,15 @@ The **standalone** are considered as extensions of the core specifications of Mi
 * **Open tracing 3.0**: support for distributed tracing via https://opentracing.io/
 * **LRA 2.0**: API for loosely coupled services to coordinate long running activities in such a way as to guarantee a globally consistent outcome without the need to take locks on data.
 
+## Quarkus
+
+Quarkus is a **Java microservice runtime** that takes a fresh look at the needs of the modern Java microservice developer. It is designed to be as **productive** as Node.js for developers and **consume as few resources** as Golang. It includes a lot of new, impactful features while supporting the APIs that developers are already familiar with.
+ When developing microservices, runtimes often do not consider the target environment. Most runtimes are **deployment-environment agnostic** to be broadly relevant. Although Quarkus is used in a wide variety of deployment environments, it has **specific enhancements and optimizations for Linux containers and Kubernetes**. For this reason, Quarkus is referred to as *Kubernetes-native Java*.
+
+ ### "Supersonic, Subatomic Java"
+
+ Quarkus has become known for its fast startup time and low memory usage. Quarkus can run applications on the JVM. It can also compile the application to a native binary using *GraalVM Native Image*.
+
+ |     | Traditional Java stack |     |     |
+ | --- | ---------------------- | --- | --- |
+ |     |                        |     |     |
