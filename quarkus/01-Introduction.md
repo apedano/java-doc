@@ -43,6 +43,20 @@ Quarkus is a **Java microservice runtime** that takes a fresh look at the needs 
 
  Quarkus has become known for its fast startup time and low memory usage. Quarkus can run applications on the JVM. It can also compile the application to a native binary using *GraalVM Native Image*.
 
- |     | Traditional Java stack |     |     |
- | --- | ---------------------- | --- | --- |
- |     |                        |     |     |
+#### Startup plus time for the first HTTP response
+ |          | Traditional Java stack | Quarkus JVM | Quarkus Native |
+ | -------- | ---------------------- | ----------- | -------------- |
+ | REST app | 4.3                    | .943        | .016           |
+ | CRUD app | 9.5                    | 2.03        | 0.42           |
+
+ #### Memory usage (MB)
+
+ |          | Traditional Java stack | Quarkus JVM | Quarkus Native |
+ | -------- | ---------------------- | ----------- | -------------- |
+ | REST app | 136                    | 73          | 12             |
+ | CRUD app | 209                    | 145         | 28             |
+
+
+
+
+
