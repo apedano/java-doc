@@ -246,133 +246,117 @@ quarkus.openshift.native-dockerfile=src/main/docker/Dockerfile.native #used for 
 ```
 This is the link to the [Dockerfile](https://github.com/apedano/kubernetes-native-microservices-sources/blob/a687bc3b50ca0c809718891fbd8223c2bebd69ae/02-your-first-quarkus-application/src/main/docker/Dockerfile.native)
 
-#### Build deploy execution
-
-```bash
-mvn clean package -Dquarkus.kubernetes.deploy=true
-```
-
-## Login into the Openshift cluster
+### Login into the Openshift cluster
 
 do the login action from the local machine with the desired project
 
-## Build and deploy to Openshift the application
+### Build and deploy to Openshift the application
 
 Execute the following goal
 
 ````mvn clean package -Pnative -Dquarkus.kubernetes.deploy=true````
 
-#### Step 1: Cluster image build (BuildConfig and ImageStream)
+#### STEP 1: build the native image
 
-The first step is the** native image creation** based on the Mandrel container (docker build)
+The first step is the **native image creation** based on the Mandrel container (**docker build**) on the local Docker instance.
 
-````shell
-Starting (in-cluster) container image build for jar using: DOCKER on server: https://api.sandbox-m4.g2pi.p1.openshiftapps.com:6443/ in namespace:xan80-dev.
+```shell
 ...
-````
+[INFO] [io.quarkus.deployment.pkg.steps.NativeImageBuildContainerRunner] Using docker to run the native image builder
+...
+```
 
-The build config is a Docker build (the option supporting native images).
-The content of the Dockerfile is the same as from  ```src/main/docker/Dockerfile.native```. The builds is launched from the local machine (so it has visibility on the target folder containing the built native image)
-The generated Openshift resources are
+#### STEP 2: Cluster image build BuildConfig
 
+The Dockerfile set in the `application.properties` file together with the just built native application will be used to create a **BuildConfig** generating an **ImageStream** in the cluster.
 
-````yaml
+```shell
+...
+[INFO] [io.quarkus...] Starting (in-cluster) container image build for jar using: DOCKER on server: https://api.sandbox-m4.g2pi.p1.openshiftapps.com:6443/ in namespace:xan80-dev.
+[INFO] [io.quarkus...] Applied: ImageStream s2i-java
+[INFO] [io.quarkus...] Applied: ImageStream ch-02-your-first-quarkus-application
+[INFO] [io.quarkus...] Applied: BuildConfig ch-02-your-first-quarkus-application
+...
+```
+This is the generated BuildConfig in the cluster
+
+```yaml
 kind: BuildConfig
 apiVersion: build.openshift.io/v1
-metadata:
-  annotations:
-    app.openshift.io/vcs-url: <<unknown>>
-    app.quarkus.io/build-timestamp: '2023-06-24 - 14:16:31 +0000'
-    app.quarkus.io/commit-id: 015e167037eec95776b10f99a102aef536aad29f
-  name: account-service
-  namespace: xan80-dev
-  labels:
-    app.kubernetes.io/managed-by: quarkus
-    app.kubernetes.io/name: account-service
-    app.kubernetes.io/version: 1.0.0-SNAPSHOT
-    app.openshift.io/runtime: quarkus
+...
 spec:
   runPolicy: Serial
   source:
     type: Dockerfile
-    dockerfile: "####\r\n# This Dockerfile is used in order to build a container that runs the Quarkus application in native (no JVM) mode.\r\n#\r\n# Before building the container image run:\r\n#\r\n# ./mvnw package -Pnative\r\n#\r\n# Then, build the image with:\r\n#\r\n# docker build -f src/main/docker/Dockerfile.native -t quarkus/account-service .\r\n#\r\n# Then run the container using:\r\n#\r\n# docker run -i --rm -p 8080:8080 quarkus/account-service\r\n#\r\n###\r\nFROM registry.access.redhat.com/ubi8/ubi-minimal:8.6\r\nWORKDIR /work/\r\nRUN chown 1001 /work \\\r\n    && chmod \"g+rwX\" /work \\\r\n    && chown 1001:root /work\r\nCOPY --chown=1001:root target/*-runner /work/application\r\n\r\nEXPOSE 8080\r\nUSER 1001\r\n\r\nCMD [\"./application\", \"-Dquarkus.http.host=0.0.0.0\"]\r\n"
+    dockerfile: >
+      <The content of the docker file in quarkus.openshift.native-dockerfile>
   strategy:
     type: Docker
     dockerStrategy: {}
   output:
     to:
       kind: ImageStreamTag
-      name: 'account-service:1.0.0-SNAPSHOT'
-  resources: {}
-  postCommit: {}
-  nodeSelector: null
-status:
-  lastVersion: 2
-````
+      name: 'ch-02-your-first-quarkus-application:1.0.0-SNAPSHOT'
+  ...
 
-````yaml
+```
+
+#### STEP 3: Create the ImageStream
+
+When the BuildConfig is applied to the cluster, the first `Build` is triggred, which will generate the `ImageStream`, using **binary s2i** build strategy.
+The `ImageStream` is used with the Deployment committed to the cluster.
+
+```shell
+[INFO] [io.quarkus...] Pulling image registry.access.redhat.com/ubi8/ubi-minimal:8.8 ...
+[INFO] [io.quarkus...] STEP 1/9: FROM registry.access.redhat.com/ubi8/ubi-minimal:8.8
+[INFO] [io.quarkus...] STEP 2/9: WORKDIR /work/
+[INFO] [io.quarkus...] STEP 3/9: RUN chown 1001 /work     && chmod "g+rwX" /work     && chown 1001:root /work
+[INFO] [io.quarkus...] STEP 4/9: COPY --chown=1001:root target/*-runner /work/application
+[INFO] [io.quarkus...] STEP 5/9: EXPOSE 8080
+[INFO] [io.quarkus...] STEP 6/9: USER 1001
+[INFO] [io.quarkus...] STEP 7/9: ENTRYPOINT ["./application","-Dquarkus.http.host=0.0.0.0"]
+[INFO] [io.quarkus...] STEP 8/9: ENV "OPENSHIFT_BUILD_NAME"="ch-02-your-first-quarkus-application-1" "OPENSHIFT_BUILD_NAMESPACE"="xan80-dev"
+[INFO] [io.quarkus...] STEP 9/9: LABEL "io.openshift.build.name"="ch-02-your-first-quarkus-application-1" "io.openshift.build.namespace"="xan80-dev"
+...
+[INFO] [io.quarkus...] Successfully pushed image-registry.openshift-image-registry.svc:5000/xan80-dev/ch-02-your-first-quarkus-application@sha256:216c50b2b129ac26d470eb7bbf7b5c8de83ac98481cbc4a307b25471744edd6c
+```
+This is the `ImageStream` generated:
+
+```yaml
+
 kind: ImageStream
 apiVersion: image.openshift.io/v1
 metadata:
-  annotations:
-    app.openshift.io/vcs-url: <<unknown>>
-    app.quarkus.io/build-timestamp: '2023-06-24 - 14:16:31 +0000'
-    app.quarkus.io/commit-id: 015e167037eec95776b10f99a102aef536aad29f
-  name: account-service
-  namespace: xan80-dev
-  labels:
-    app.kubernetes.io/managed-by: quarkus
-    app.kubernetes.io/name: account-service
-    app.kubernetes.io/version: 1.0.0-SNAPSHOT
-    app.openshift.io/runtime: quarkus
-spec:
-  lookupPolicy:
-    local: true
-status:
-  dockerImageRepository: 'image-registry.openshift-image-registry.svc:5000/xan80-dev/account-service'
-  publicDockerImageRepository: >-
-    default-route-openshift-image-registry.apps.sandbox-m4.g2pi.p1.openshiftapps.com/xan80-dev/account-service
-  tags:
-    - tag: 1.0.0-SNAPSHOT
-      items:
-        - created: '2023-06-24T14:16:54Z'
-          dockerImageReference: >-
-            image-registry.openshift-image-registry.svc:5000/xan80-dev/account-service@sha256:dc23a1f088233b5a3631ee5e776f4214469e06f42ceed148db59efe92cb9cb22
-          image: >-
-            sha256:dc23a1f088233b5a3631ee5e776f4214469e06f42ceed148db59efe92cb9cb22
-          generation: 1
-        - created: '2023-06-24T13:31:52Z'
-          dockerImageReference: >-
-            image-registry.openshift-image-registry.svc:5000/xan80-dev/account-service@sha256:76ffd5b404e2a3528020d8a02a62c7d56a0bea34f39bba1dd1ccf0d98630909f
-          image: >-
-            sha256:76ffd5b404e2a3528020d8a02a62c7d56a0bea34f39bba1dd1ccf0d98630909f
-          generation: 1
-````
+  ...
+  name: ch-02-your-first-quarkus-application
+  ...
+tags:
+- tag: 1.0.0-SNAPSHOT
+    items:
+    - created: '2023-11-07T15:34:27Z'
+        dockerImageReference: >-
+        image-registry.openshift-image-registry.svc:5000/xan80-dev/ch-02-your-first-quarkus-application@sha256:xxxyyy
+        image: >-
+        sha256:xxxyyy
+        generation: 1
+```
 
-After the build in openshift happens, the image stream will be ready to be used in the Openshift application 
-
-### Deploy the application to the cluster
+#### STEP 4: Deploy the application to the cluster
 
 The process will generate the _DeploymentConfig_, the _Service_ and the _Route_ to expose the app endpoints externally. 
 
 ````shell
-
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Deploying to openshift server: https://api.sandbox-m4.g2pi.p1.openshiftapps.com:6443/ in namespace: xan80-dev.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: Service account-service.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: ImageStream s2i-java.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: ImageStream account-service.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: BuildConfig account-service.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: DeploymentConfig account-service.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: Route account-service.
-[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] The deployed application can be accessed at: http://account-service-xan80-dev.apps.sandbox-m4.g2pi.p1.openshiftapps.com
-[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 133466ms
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: DeploymentConfig ch-02-your-first-quarkus-application.
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: Route ch-02-your-first-quarkus-application.
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] The deployed application can be accessed at: http://ch-02-your-first-quarkus-application-xan80-dev.apps.sandbox-m4.g2pi.p1.openshiftapps.com
+[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 149895ms
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time:  02:26 min
-[INFO] Finished at: 2023-06-24T16:17:00+02:00
+[INFO] Total time:  02:45 min
+[INFO] Finished at: 2023-11-07T16:34:32+01:00
 [INFO] ------------------------------------------------------------------------
-
-Process finished with exit code 0
-
 ````
+The application will respond to 
+
+http://ch-02-your-first-quarkus-application-xan80-dev.apps.sandbox-m4.g2pi.p1.openshiftapps.com/accounts
