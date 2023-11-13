@@ -1,6 +1,6 @@
 # 02 - Your first Quarkus application
 
-[Source code](https://github.com/apedano/kubernetes-native-microservices-sources/tree/main/02-your-first-quarkus-application)
+[Source code](https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch-02-openshift-deploy/account-service)
 
 The application is created with https://code.quarkus.io/ and the **RESTEasy Classic** extension.
 
@@ -11,6 +11,7 @@ By running the maven quarku plugin:
 ```bash
 mvn quarkus:dev
 ```
+
 Using live coding enables us to **update Java source, resources, and configuration of
 a running application**. All changes are reflected in the running application automatically, enabling developers to improve the turnaround time when developing a new application.
  Live coding enables hot deployment via **background compilation**. Any changes to
@@ -78,6 +79,7 @@ The `pom.xml` file of the project contains the `native` **profile** that we can 
 mvn clean install -Pnative
 mvn clean install -Dquarkus.package.type=native
 ```
+
 You can build Quarkus native executables in two ways:
 
 * Use a **Container Image of GraalVM**. This option does not require installing GraalVM locally
@@ -90,6 +92,7 @@ We need Docker running in the host
 ```bash
 service docker start
 ```
+
 Then we can build using the **container build** option
 
 ```
@@ -102,7 +105,7 @@ Aleternatevely, we can set the property in the `application.properties` file
 quarkus.native.container-build=true
 ```
 
-The build will 
+The build will
 
 ```bash
 [INFO] -------------< org.acme:02-your-first-quarkus-application >-------------
@@ -113,7 +116,9 @@ The build will
 [INFO] --- quarkus:3.5.0:build (default-cli) @ 02-your-first-quarkus-application ---
 [INFO] [io.quarkus.deployment.pkg.steps.JarResultBuildStep] Building native image source jar: C:\projects\personal\kubernetes-native-microservices-sources\02-your-first-quarkus-application\target\02-your-first-quarkus-application-1.0.0-SNAPSHOT-native-image-source-jar\02-your-first-quarkus-application-1.0.0-SNAPSHOT-runner.jar
 ```
+
 The container build option will make the build pull the `builder-image` (`ubi-quarkus-mandrel-builder-image:jdk-21`) from the Docker hub to the local Docker instance
+
 ```bash
 [INFO] [io.quarkus.deployment.pkg.steps.NativeImageBuildContainerRunner] Using docker to run the native image builder
 [INFO] [io.quarkus.deployment.pkg.steps.NativeImageBuildContainerRunner] Checking status of builder image 'quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21'
@@ -125,6 +130,7 @@ jdk-21: Pulling from quarkus/ubi-quarkus-mandrel-builder-image
 Status: Downloaded newer image for quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21
 ```
+
 Once the container is running the build command is sent
 
 ```bash
@@ -166,19 +172,20 @@ Produced artifacts:
 ========================================================================================================================
 Finished generating '02-your-first-quarkus-application-1.0.0-SNAPSHOT-runner' in 1m 28s.
 ```
+
 The output contains also an option to run the native image in docker
 
 ```bash
 [INFO] [io.quarkus.deployment.pkg.steps.NativeImageBuildRunner] docker run --env LANG=C --rm -v /c/projects/personal/kubernetes-native-microservices-sources/02-your-first-quarkus-application/target/02-your-first-quarkus-application-1.0.0-SNAPSHOT-native-image-source-jar:/project:z --entrypoint /bin/bash quay.io/quarkus/ubi-quarkus-mandrel-builder-image:jdk-21 -c objcopy --strip-debug 02-your-first-quarkus-application-1.0.0-SNAPSHOT-runner
 ```
-We can also run the native app locally from 
+
+We can also run the native app locally from
 
 ```bash
 ./target/02-your-first-quarkus-application-1.0.0-SNAPSHOT-runner
 ```
 
-
-**NOTE**: [GraalVM](https://quarkus.io/guides/building-native-image#configuring-graalvm) must be installed 
+**NOTE**: [GraalVM](https://quarkus.io/guides/building-native-image#configuring-graalvm) must be installed
 
 ## Deploy the native applications to Kubernetes/Openshift
 
@@ -190,7 +197,8 @@ Quakus implement the possibility to **build kubernetes deployment application YA
  <artifactId>quarkus-kubernetes</artifactId>
 </dependency>
 ````
-When running ```clean install``` the dependency will generate both json and yaml config files in ```/target/kubernetes```.
+
+When running ``clean install`` the dependency will generate both json and yaml config files in ``/target/kubernetes``.
 
 ### Add Quarkus Openshift extension
 
@@ -206,6 +214,7 @@ There is also an Openshift specific Quarkus extension
 ````
 
 ### Build strategies
+
 For security and convenience, OpenShift supports different build strategies that are not available in the upstream Kubernetes distributions.
 
 #### Docker build
@@ -220,17 +229,18 @@ The build process is performed inside the OpenShift cluster. Using `S2I` to depl
 
 This strategy uses a **JAR file as an input** to the S2I build process, which speeds up the build process and deployment of your application.
 
-|  Build strategy  |  Support for Quarkus tooling  |  Support for JVM  |  Support for Native  |  Support for JVM Serverless  |  Support for native Serverless  |
-|------------------|-------------------------------|-------------------|----------------------|------------------------------|---------------------------------|
-|  Docker build    |  YES                          |  YES              |  YES                 |  YES                         |  YES                            |
-|  S2I Binary      |  YES                          |  YES              |  NO                  |  NO                          |  NO                             |
-|  Source S2I      |  NO                           |  YES              |  NO                  |  NO                          |  NO                             |
+| Build strategy | Support for Quarkus tooling | Support for JVM | Support for Native | Support for JVM Serverless | Support for native Serverless |
+| -------------- | --------------------------- | --------------- | ------------------ | -------------------------- | ----------------------------- |
+| Docker build   | YES                         | YES             | YES                | YES                        | YES                           |
+| S2I Binary     | YES                         | YES             | NO                 | NO                         | NO                            |
+| Source S2I     | NO                          | YES             | NO                 | NO                         | NO                            |
 
 ### Deploy the native application to Openshift
 
 If we use the `quarkus-openshift` extension, you can deploy your application to OpenShift using the **Docker build strategy**. The container is built inside the OpenShift cluster and provided as an image stream.
 
 #### Building using custom `Dockerfile`
+
 The Quarkus project includes pre-generated Dockerfiles with instructions. When you want to use a custom Dockerfile, you need to add the file in the `src/main/docker` directory or anywhere inside the module. Additionally, you need to **set the path to your Dockerfile** using the `quarkus.openshift.jvm-dockerfile` property.
 
 #### Configuration
@@ -244,6 +254,7 @@ quarkus.openshift.route.expose=true #expose the deployment via a route
 quarkus.openshift.native-dockerfile=src/main/docker/Dockerfile.native #used for the ImageStream creation
 
 ```
+
 This is the link to the [Dockerfile](https://github.com/apedano/kubernetes-native-microservices-sources/blob/a687bc3b50ca0c809718891fbd8223c2bebd69ae/02-your-first-quarkus-application/src/main/docker/Dockerfile.native)
 
 ### Login into the Openshift cluster
@@ -254,7 +265,7 @@ do the login action from the local machine with the desired project
 
 Execute the following goal
 
-````mvn clean package -Pnative -Dquarkus.kubernetes.deploy=true````
+``mvn clean package -Pnative -Dquarkus.kubernetes.deploy=true``
 
 #### STEP 1: build the native image
 
@@ -278,6 +289,7 @@ The Dockerfile set in the `application.properties` file together with the just b
 [INFO] [io.quarkus...] Applied: BuildConfig ch-02-your-first-quarkus-application
 ...
 ```
+
 This is the generated BuildConfig in the cluster
 
 ```yaml
@@ -320,6 +332,7 @@ The `ImageStream` is used with the Deployment committed to the cluster.
 ...
 [INFO] [io.quarkus...] Successfully pushed image-registry.openshift-image-registry.svc:5000/xan80-dev/ch-02-your-first-quarkus-application@sha256:216c50b2b129ac26d470eb7bbf7b5c8de83ac98481cbc4a307b25471744edd6c
 ```
+
 This is the `ImageStream` generated:
 
 ```yaml
@@ -343,7 +356,7 @@ tags:
 
 #### STEP 4: Deploy the application to the cluster
 
-The process will generate the _DeploymentConfig_, the _Service_ and the _Route_ to expose the app endpoints externally. 
+The process will generate the _DeploymentConfig_, the _Service_ and the _Route_ to expose the app endpoints externally.
 
 ````shell
 [INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: DeploymentConfig ch-02-your-first-quarkus-application.
@@ -357,6 +370,7 @@ The process will generate the _DeploymentConfig_, the _Service_ and the _Route_ 
 [INFO] Finished at: 2023-11-07T16:34:32+01:00
 [INFO] ------------------------------------------------------------------------
 ````
-The application will respond to 
+
+The application will respond to
 
 http://ch-02-your-first-quarkus-application-xan80-dev.apps.sandbox-m4.g2pi.p1.openshiftapps.com/accounts

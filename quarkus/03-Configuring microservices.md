@@ -1,12 +1,12 @@
 # 03 - Configuring microservices
 
-Code in: https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch03-configuration
+Code in: https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch03-configuration/bank-service
 
 ## ConfigSource and Config class
 
 ![img_1.png](images/03/img_1.png)
 
-### ConfigProperty example
+### `ConfigProperty` example
 
 ```java
 @ConfigProperty(name="app.mobileBanking") //Injects the value of app.mobileBanking into the mobileBanking field
@@ -31,7 +31,7 @@ public String getNameProgrammatically() {
 }
 ```
 
-## ConfigSources
+## Config Sources
 
 Each configuration source is assigned an _ordinal_. The properties defined in a configuration source with a **higher ordinal take precedence** over properties defined in a configuration source with a
 lower ordinal
@@ -239,7 +239,7 @@ Add properties for secrets in ``application.properties`` (note the name of the s
 
 ## Deploy to Openshift
 
-Once deployed with the mvn goal described in [02-Your first Quarkus application](<02-Your first Quarkus application.md>)
+Once deployed with the mvn goal described in [02-Your first Quarkus application](02-Your first Quarkus application.md)
 
 ```bash
 $ curl -s http://bank-service-xan80-dev.apps.sandbox-m4.g2pi.p1.openshiftapps.com/bank/name
