@@ -1,4 +1,4 @@
-##  Asynchronous response types
+## 05 APP 01 - Asynchronous response types
 
 On the transaction service
 
@@ -49,7 +49,6 @@ String result = completableFuture.get(); //when we are ready to get the result f
 assertEquals("Hello", result);
 ```
 
-
 #### `CompletableFuture` implementation of `CompletionStage` for void methods
 
 Two methods can ben used
@@ -92,13 +91,14 @@ public T get() throws InterruptedException, ExecutionException
 
 These methods implement two different interfaces, but they both wait and return the result value when completed.
 
-
 ### Chaining _CompletionStage_(s) with _runAsync()_
+
 ```java
 CompletionStage<Void> thenRun(Runnable action)
 CompletionStage<Void> thenRunAsync(Runnable action)
 CompletionStage<Void> thenRunAsync(Runnable action, Executor executor)
 ```
+
 Example
 
 ```java
@@ -151,9 +151,10 @@ main exiting
 
 In above example the two async tasks ran in the same thread (created by the default executor) i.e. `ForkJoinPool.commonPool-worker-3`.
 
-**Note**: 
+**Note**:
+
 * `CompletableFuture`, by default, uses an `Executor` created by `ForkJoinPool.commonPool()` (unless parallelism is not supported, in which case, a new Thread is created to run each task).
-* For a non-async stage, the task is executed in the thread that completes the previous stage.
+* For a **non-async stage**, the task is executed in the thread that completes the previous stage.
 
 ### Run with a non default _Executor_
 
@@ -227,6 +228,7 @@ public class SupplyExample {
 ### Chaining CompletionStage(s) with supplyAsync()
 
 Since `CompletableFuture.supplyAsync()` returns `CompletableFuture<T>`, only those methods defined in CompletionStage can be chained which require a function with argument of type T and optionally produce a result (of any type) :
+
 ```java
 <U> CompletionStage<U> thenApply(Function<? super T, ? extends U> fn)
 <U> CompletionStage<U> thenApplyAsync(Function<? super T,? extends U> fn)
@@ -269,7 +271,6 @@ There's very simple rule for chaining here:
 
 The methods which return `CompletionStage<Void>` or `CompletableFuture<Void>` can only be chained with a method which takes a `Runnable` or `Supplier`.
 The methods which return `CompletionStage<U>` can be chained with methods which takes `Consumer<U>` or `Function<U,R>`.
-
 
 The intermediate completion stages can be summarized as:
 
