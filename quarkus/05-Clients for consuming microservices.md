@@ -1,5 +1,7 @@
 # 05 - Clients for consuming other microservices
 
+https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch-05-rest-clients
+
 The **Transaction service** calls the **Account service** to retrieve the current balance to ensure the requested transaction doesn’t result in an overdrawn account.
 
 <img src="images/05/img.png" width="400">
@@ -126,6 +128,30 @@ Add dependency
 Quarkus provides ``QuarkusTestResourceLifecycleManager``. Implementing ``QuarkusTestResourceLifecycleManager`` enables us to customize what happens during ``start()`` and ``stop()`` in the life cycle of a test. Any implementation is applied to a test with `@QuarkusTestResource`.
 One is needed to interact with the WireMock server as in the ``src/test/java/transactionservice/config/WiremockAccountService.java``
 
+```java
+@Slf4j
+public class WiremockAccountService implements QuarkusTestResourceLifecycleManager {
+    private WireMockServer wireMockServer;
+    
+    @Override
+    public Map<String, String> start() {
+        wireMockServer = new WireMockServer();
+        wireMockServer.start();
+        stubFor(get(urlEqualTo("/accounts/repository/121212/balance"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("435.76")
+                ));
+        return Collections.singletonMap(
+        "quarkus.rest-client.account-service.url", //@RegisterRestClient config key based
+        //"banking.api.service.AccountService/mp-rest/url", 
+        //MicroProfile Rest client based config also valid
+        wireMockServer.baseUrl());
+    ...
+    }
+}
+```
+
 Then we can test as in ``src/test/java/transactionservice/resource/TransactionResourceTest.java``
 
 ## Deployment to Kubernetes
@@ -145,12 +171,12 @@ We can add the headers to the client call method
 
 ```java
 @Path("/api/accounts")
-@ClientHeaderParam(name = "class-level-param", value = "AccountServiceinterface") //Adds class-level-param to the outgoing HTTP request header.
-    // At class level it will be added to all methods
-@RegisterClientHeaders //Indicates the default ClientHeadersFactory should be used. The default factory will propagate any
-    //headers from an inbound JAX-RS request onto the outbound client request, where the headers are
-    //        added as a comma-separated list into the configuration key named
-    //        org.eclipse.microprofile.rest.client.propagateHeaders. A custom ClientHeadersFactory can also be added
+//Adds class-level-param to the outgoing HTTP request header for all methods
+@ClientHeaderParam(name = "class-level-param", value = "AccountServiceinterface") 
+/**
+Indicates the default ClientHeadersFactory should be used. The default factory will propagate any headers from an inbound JAX-RS request (TransactionService) onto the outbound client request (AccountService), where the headers are  added as a comma-separated list into the configuration key named `org.eclipse.microprofile.rest.client.propagateHeaders`. A custom ClientHeadersFactory can also be added
+*/
+@RegisterClientHeaders 
         ...
 public interface AccountService {
     ...
@@ -177,21 +203,20 @@ public interface AccountService {
 In the server we can inject the incoming request headers
 
 ```java
-@POST
+    @POST
     @Path("{accountNumber}/transaction-headers")
-    public Map<String, List<String>> transactionHeaders(@PathParam("accountNumber") Long
-                                                                accountNumber, BigDecimal amount,
-                                                        @Context HttpHeaders httpHeaders) { //@Context is equivalent to @Inject for CDI in the JAX-RS
+    public Map<String, List<String>> transactionHeaders(@PathParam     ("accountNumber") Long accountNumber, BigDecimal amount,
+        @Context HttpHeaders httpHeaders) { //@Context is equivalent to @Inject for CDI in the JAX-RS
         //returns the headers from the incoming call including the class and method level ones defined in the AcccountService interface
         return httpHeaders.getRequestHeaders();
     }
 ```
 
-### Changing providers
+## Changing providers
 
 This is the sequence of processing REST client interfaces in JAX-RS, for each we can define a _provider_ to customize its behavior
 
-![img_3.png](img_3.png)
+<img src="images/05/img_3.png" width="500">
 
 **NOTE**: thi applies to the communications between the ``AccountService`` server and client! Not to the calls to the ``TransactionResource`` which is the exposed resource.
 
@@ -203,21 +228,17 @@ We can define a provider by:
 * Implement either ``RestClientBuilderListener`` or ``RestClientListener``, and
   register the provider directly onto the ``RestClientBuilder``
 
-#### Create a _ClientRequestFilter_ provider
+### Create a _ClientRequestFilter_ provider
 
 The implementation of the REST client interfaces is
 
 ```java
 public class AccountRequestFilter implements ClientRequestFilter {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AccountRequestFilter.class);
-
     /*
     This implementation adds the invoked method to the request as a param
      */
     @Override
     public void filter(ClientRequestContext requestContext) throws IOException {
-        LOGGER.info("Inside the AccountRequestFilter provider method");
         Method invokedMethod =
                 (Method) requestContext.getProperty("org.eclipse.microprofile.rest.client.invokedMethod");
         requestContext.getHeaders().add("Invoked-Client-Method", invokedMethod.getName());

@@ -208,11 +208,18 @@ There are several modes to configure a Quarkus application running on Kubernetes
 
 A _ConfigMap_ with name **banking** can be generated with in the cluster with:
 
-```yaml
-kubectl create configmap banking --from-file=application.yaml
+
+```shell
+kubectl create configmap account-service-cm --from-file=application.yaml
 ```
 
 It will contain the key _application.yaml_ which will have priority over the ones on application.properties
+
+```yaml
+bank:
+  name: Bank of ConfigMap
+```
+
 
 Now the ``application.properties`` files has to be changed with
 
