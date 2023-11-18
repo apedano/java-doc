@@ -1,4 +1,4 @@
-## 05 APP 01 - Asynchronous response types
+## 05 - APP 01 - Asynchronous response types
 
 On the transaction service
 
