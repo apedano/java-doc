@@ -275,3 +275,51 @@ The methods which return `CompletionStage<U>` can be chained with methods which 
 The intermediate completion stages can be summarized as:
 
 ![img_2.png](images/05/img_2.png)
+
+### Executing multuple tasks in parallel and get results stream
+
+```java
+@Test
+void bulkheadTest() {
+    ExecutorService executor = Executors.newFixedThreadPool(3);
+    List<CompletableFuture<Response>> completableFutures = List.of(
+        CompletableFuture.supplyAsync(responseSupplier(1), executor),
+        CompletableFuture.supplyAsync(responseSupplier(2), executor),
+        CompletableFuture.supplyAsync(responseSupplier(3), executor)
+    );
+    List<Response> list = completableFutures.stream().map(CompletableFuture::join).toList();
+    log.info("All futures joined");
+    assertThat(list)
+        .isNotEmpty()
+        .hasSize(3)
+        .map(response -> Status.fromStatusCode(response.getStatusCode()))
+        .containsExactlyInAnyOrder(Status.OK, Status.OK, Status.TOO_MANY_REQUESTS);
+}
+
+private Supplier<Response> responseSupplier(int counter) {
+    return () -> {
+        log.info("Executing call #{} on thread [{}]", counter, Thread.currentThread().getName());
+        return given()
+            .contentType("application/json")
+            .when()
+            .get("resilience/do-delivery-bulkhead")
+            .then()
+            .extract()
+            .response();
+    };
+}
+```
+Log contents
+```bash
+2023-11-20 13:23:10,426 INFO  [org.acm.res.ResilienceStrategiesResourceTest] (pool-8-thread-1) Executing call #1 on thread [pool-8-thread-1]
+2023-11-20 13:23:10,426 INFO  [org.acm.res.ResilienceStrategiesResourceTest] (pool-8-thread-3) Executing call #3 on thread [pool-8-thread-3]
+2023-11-20 13:23:10,426 INFO  [org.acm.res.ResilienceStrategiesResourceTest] (pool-8-thread-2) Executing call #2 on thread [pool-8-thread-2]
+2023-11-20 13:23:11,072 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-2) Falling back to ResilienceStrategiesResource#bulkheadFallback()
+2023-11-20 13:23:11,072 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-1) Called doDelivery...
+2023-11-20 13:23:11,072 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-3) Called doDelivery...
+2023-11-20 13:23:11,072 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-1) Using driver #2
+2023-11-20 13:23:11,072 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-3) Using driver #1
+2023-11-20 13:23:14,082 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-3) Delivery #1 executed. #1 drivers available
+2023-11-20 13:23:14,082 INFO  [org.acm.res.ResilienceStrategiesResource] (executor-thread-1) Delivery #2 executed. #2 drivers available
+2023-11-20 13:23:14,092 INFO  [org.acm.res.ResilienceStrategiesResourceTest] (main) All futures joined
+```

@@ -1,5 +1,7 @@
 # 06 - Application health
 
+**Code: https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch-06-health-checks**
+
 ## **MicroProfile** health API
 
 Kubernetes uses _probes_ to check the exposed health and take corrective
@@ -34,10 +36,9 @@ The platform (Kubernetes) can use either the response status code or the respons
 
 <img src="images/06/img_2.png" width="500">
 
-
-| Liveness                                    | Readiness                                   |
-| ------------------------------------------- | ------------------------------------------- |
-| <img src="images/06/img_3.png" width="500"> | <img src="images/06/img_7.png" width="500"> |
+| Liveness                                        | Readiness                                       |
+| ----------------------------------------------- | ----------------------------------------------- |
+| `<img src="images/06/img_3.png" width="500">` | `<img src="images/06/img_7.png" width="500">` |
 
 ## Activate health check in quarkus
 
