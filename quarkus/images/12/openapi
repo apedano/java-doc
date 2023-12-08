@@ -1,0 +1,83 @@
+---
+openapi: 3.0.3
+info:
+  title: account-service API
+  version: 1.0.0-SNAPSHOT
+paths:
+  /accounts:
+    get:
+      tags:
+      - Account Resource
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                uniqueItems: true
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+    post:
+      tags:
+      - Account Resource
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Account'
+      responses:
+        "200":
+          description: OK
+  /accounts/{accountNumber}:
+    get:
+      tags:
+      - Account Resource
+      parameters:
+      - name: accountNumber
+        in: path
+        required: true
+        schema:
+          format: int64
+          type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+  /hello:
+    get:
+      tags:
+      - Greeting Resource
+      responses:
+        "200":
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Account:
+      type: object
+      properties:
+        accountNumber:
+          format: int64
+          type: integer
+        customerNumber:
+          format: int64
+          type: integer
+        customerName:
+          type: string
+        balance:
+          type: number
+        accountStatus:
+          $ref: '#/components/schemas/AccountStatus'
+    AccountStatus:
+      enum:
+      - OPEN
+      - CLOSED
+      - OVERDRAWN
+      type: string

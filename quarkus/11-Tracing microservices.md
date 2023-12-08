@@ -1,6 +1,6 @@
 # 11 - Tracing microservices
 
-Code: ???
+Code: https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch-09-tracing-microservices
 
 In essence, tracing is a key tool in the operations toolbox for **observing** a running production system. It is the best means of debugging the **execution path** of a distributed system.
 
