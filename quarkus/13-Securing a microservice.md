@@ -1,6 +1,6 @@
 # 13 - Securing a microservice
 
-Code: 
+Code: https://github.com/apedano/kubernetes-native-microservices-sources/tree/ch-13-securing-a-microservice
 
 <img src="images/13/security_diagram.png" width="500">
 
