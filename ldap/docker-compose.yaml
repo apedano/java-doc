@@ -1,0 +1,24 @@
+version: '3.8'
+name: 'ldap'
+services:
+  openldap:
+    image: osixia/openldap:latest
+    environment:
+      - LDAP_ORGANISATION="My Org"
+      - LDAP_DOMAIN=my-org.com
+      - LDAP_ADMIN_PASSWORD=password
+    networks:
+      - openldap
+    hostname: ldap-service
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    ports:
+      - "8080:80"
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=openldap
+      - PHPLDAPADMIN_HTTPS=false
+    networks:
+      - openldap
+networks:
+  openldap:
+    name: openldap

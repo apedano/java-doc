@@ -14,7 +14,7 @@ To avoid Java API fragmentation, **IBM, London Java Community (LJC), Payara, Red
 
 ### Microprofile 6.1 API specifications
 
-<img src="images/01/../microprofile_6_1_specifications.png" width="500">
+<img src="./images/01/microprofile_6_1_specifications.png" width="500">
 
 * **Config 3.1**: Provides an easy to use and flexible system for application configuration
 * **Fault tolerance 4.0**: Defines multiple strategies to improve application robustness
@@ -39,7 +39,7 @@ The **standalone** are considered as extensions of the core specifications of Mi
 Quarkus is a **Java microservice runtime** that takes a fresh look at the needs of the modern Java microservice developer. It is designed to be as **productive** as Node.js for developers and **consume as few resources** as Golang. It includes a lot of new, impactful features while supporting the APIs that developers are already familiar with.
  When developing microservices, runtimes often do not consider the target environment. Most runtimes are **deployment-environment agnostic** to be broadly relevant. Although Quarkus is used in a wide variety of deployment environments, it has **specific enhancements and optimizations for Linux containers and Kubernetes**. For this reason, Quarkus is referred to as *Kubernetes-native Java*.
 
- ### "Supersonic, Subatomic Java"
+ ### "_Supersonic, Subatomic Java_"
 
  Quarkus has become known for its fast startup time and low memory usage. Quarkus can run applications on the JVM. It can also compile the application to a native binary using *GraalVM Native Image*.
 
@@ -47,7 +47,7 @@ Quarkus is a **Java microservice runtime** that takes a fresh look at the needs 
  |          | Traditional Java stack | Quarkus JVM | Quarkus Native |
  | -------- | ---------------------- | ----------- | -------------- |
  | REST app | 4.3                    | .943        | .016           |
- | CRUD app | 9.5                    | 2.03        | 0.42           |
+ | CRUD app | 9.5                    | 2.03        | 0.42           | 
 
  #### Memory usage (MB)
 
