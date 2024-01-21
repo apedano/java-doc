@@ -7,7 +7,6 @@ https://www.redhat.com/it/topics/security/what-is-ldap-authentication
 https://medium.com/@nisha.narayanan/securing-your-api-connect-cloud-with-ldap-e214f6886d29
 https://ldaptor.readthedocs.io/en/latest/ldap-intro.html
 
-https://docs.digital.ai/bundle/devops-deploy-version-v.22.2/page/deploy/how-to/setup-and-configuration-LDAP-with-deploy.html
 
 LDAP stands for Lightweight Directory Access Protocol. 
 It is an industry standard application protocol (RFC [here](https://tools.ietf.org/html/rfc4511)) that serves to define an interface or language with which client applications can talk to a directory service (such as OpenLDAP, Active Directory etc.) to query or modify the information in the directory.
@@ -84,13 +83,159 @@ Start an OpenLDAP container.
 
 we can use the [docker-compose.yaml](docker-compose.yaml) file.
 
+### Volume mounts
+With the configuration
+
+```yaml
+volumes:
+  - ./volumes/database:/var/lib/ldap
+  - ./volumes/config:/etc/ldap/slapd.d
+  - ./volumes/certs:/container/service/slapd/assets/certs
+```
+we mount the subfolders  in `./volumes` for the openLdap database, config, and certificates.
+
+If the volume folders are empty, we can initialise them by starting the container and importing the [my-org.ldif](my-org.ldif) file from the php gui. 
+Once the database has been initialised, it will be persisted in the host folder, so that, after container restart, data will be persisted.
+
+### Login to PHP GUI
+
 Once started we can login to http://localhost:8080 
 
-using the user: `dc=my-org,dc=com`
+using the user: `cn=admin,dc=springframework,dc=org`
 and password: `<LDAP_ADMIN_PASSWORD>`
 
+### Import DIT from ldif file
+In the gui select the `Import` icon and past the content of the [my-org.ldif](my-org.ldif)
+selecting the ignore errors option. The created DIT will be persisted in the volumes, 
+therefore this is a one time operation.
 
+### Command example - simple search
+
+In the command, `ldap-openldap-1` is the container name from the compose file.
+
+```bash
+docker exec ldap-openldap-1 ldapsearch -x -H ldap://localhost -D "uid=bob,ou=people,dc=springframework,dc=org" -b uid=bob,ou=people,dc=springframework,dc=org -w bobspassword
+```bash
+$ docker exec ldap-openldap-1 ldapsearch -x -H ldap://localhost -b uid=bob,ou=people,dc=springframework,dc=org -D "cn=admin,dc=springframework,dc=org" -w password
+
+...
+# bob, people, springframework.org
+dn: uid=bob,ou=people,dc=springframework,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: Bob Hamilton
+sn: Hamilton
+uid: bob
+userPassword:: Ym9ic3Bhc3N3b3Jk
+```
+
+### Command example - simple bind authentication
+```bash
+$ docker exec ldap-openldap-1 ldapsearch -x -H ldap://localhost -b uid=bob,ou=people,dc=springframework,dc=org -D "cn=admin,dc=springframework,dc=org" -w password
+
+...
+# bob, people, springframework.org
+dn: uid=bob,ou=people,dc=springframework,dc=org
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+cn: Bob Hamilton
+sn: Hamilton
+uid: bob
+userPassword:: Ym9ic3Bhc3N3b3Jk
+```
+
+## Spring LDAP integration
+
+Repo: [https://github.com/apedano/ldap-security-demo](https://github.com/apedano/ldap-security-demo)
+
+With LDAP we can implement both authentication and authorization.
+Sometimes those two functions are separated: user credentials are authenticated against LDAP server, 
+while authorization can be handled via database (e.g. a `UserRepository`).
+
+### Authentication
+
+LDAP authentication in Spring Security can be roughly divided into the following stages.
+
+* Obtaining the unique LDAP "Distinguished Name", or DN, from the login name. This will often mean performing a search in the directory, unless the exact mapping of usernames to DNs is known in advance. So a user might enter the name "joe" when logging in, but the actual name used to authenticate to LDAP will be the full DN, such as uid=joe,ou=users,dc=spring,dc=io.
+* Authenticating the user, either by "binding" as that user or by performing a remote "compare" operation of the user’s password against the password attribute in the directory entry for the DN.
+* Loading the list of authorities for the user.
+
+
+
+We will look at some configuration scenarios below. For full information on available configuration options, please consult the security namespace schema (information from which should be available in your XML editor).
+
+Spring Security’s LDAP support does not use the `UserDetailsService` because LDAP _bind authentication does not let clients read the password or even a hashed version of the password_.
+
+For this reason, LDAP support is implemented through the LdapAuthenticator interface. The LdapAuthenticator interface is also responsible for retrieving any required user attributes. This is because the permissions on the attributes may depend on the type of authentication being used. For example, if binding as the user, it may be necessary to read the attributes with the user’s own permissions.
+
+Spring Security supplies two `LdapAuthenticator` implementations:
+
+#### Bind authentication
+
+[Bind Authentication](https://ldap.com/the-ldap-bind-operation/) is the most common mechanism for authenticating users with LDAP. 
+In bind authentication, _the user’s credentials_ (username and password) _are submitted to the LDAP server, which authenticates them_. 
+The advantage to using bind authentication is that the **user’s secrets (the password) do not need to be exposed to clients**, which helps to protect them from leaking.
+
+```java
+@Bean
+AuthenticationManager authenticationManager(BaseLdapPathContextSource contextSource) {
+	LdapBindAuthenticationManagerFactory factory = new LdapBindAuthenticationManagerFactory(contextSource);
+	factory.setUserSearchFilter("(uid={0})");
+	factory.setUserSearchBase("ou=people");
+	return factory.createAuthenticationManager();
+}
+```
+
+#### Password authentication
+Password comparison is when the password supplied by the user is compared with the one stored in the repository. 
+This can either be done by retrieving the value of the password attribute and checking it locally or by performing an LDAP “compare” operation, where the supplied password is passed to the server for comparison and **the real password value is never retrieved**. 
+An LDAP compare cannot be done when the password is properly hashed with a random salt.
+
+```java
+@Bean
+AuthenticationManager authenticationManager(BaseLdapPathContextSource contextSource) {
+  LdapPasswordComparisonAuthenticationManagerFactory factory = new LdapPasswordComparisonAuthenticationManagerFactory(
+  contextSource, new BCryptPasswordEncoder());
+  factory.setUserDnPatterns("uid={0},ou=people");
+  factory.setPasswordAttribute("pwd");  
+  return factory.createAuthenticationManager();
+}
+```
+
+### Authorization
+
+Spring Security’s `LdapAuthoritiesPopulator` is used to determine what authorities are returned for the user. 
+The following example shows how configure LdapAuthoritiesPopulator
+
+```java
+@Bean
+LdapAuthoritiesPopulator authorities(BaseLdapPathContextSource contextSource) {
+  String groupSearchBase = "";
+  DefaultLdapAuthoritiesPopulator authorities =
+  new DefaultLdapAuthoritiesPopulator(contextSource, groupSearchBase);
+  authorities.setGroupSearchFilter("member={0}");
+  return authorities;
+}
+```
+
+```java
+@Bean
+AuthenticationManager authenticationManager(BaseLdapPathContextSource contextSource, LdapAuthoritiesPopulator authorities) {
+  LdapBindAuthenticationManagerFactory factory = new LdapBindAuthenticationManagerFactory(contextSource);
+  factory.setUserDnPatterns("uid={0},ou=people");
+  factory.setLdapAuthoritiesPopulator(authorities);
+  return factory.createAuthenticationManager();
+}
+```
 
 https://medium.com/@im_gpd/ldap-and-jwt-authentication-in-spring-boot-a-comprehensive-guide-a0e6202655f
 
 https://www.tutorialspoint.com/how-to-implement-simple-authentication-in-spring-boot
+https://docs.spring.io/spring-security/reference/servlet/authentication/passwords/ldap.html
+
+Explains both authentication and authorization
+https://docs.spring.io/spring-security/site/docs/5.0.x/reference/html/ldap.html

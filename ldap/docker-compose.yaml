@@ -4,9 +4,16 @@ services:
   openldap:
     image: osixia/openldap:latest
     environment:
-      - LDAP_ORGANISATION="My Org"
-      - LDAP_DOMAIN=my-org.com
+      - LDAP_ORGANISATION="Spring"
+      - LDAP_DOMAIN=springframework.org
       - LDAP_ADMIN_PASSWORD=password
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ./volumes/database:/var/lib/ldap
+      - ./volumes/config:/etc/ldap/slapd.d
+      - ./volumes/certs:/container/service/slapd/assets/certs
     networks:
       - openldap
     hostname: ldap-service
