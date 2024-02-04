@@ -239,3 +239,7 @@ https://docs.spring.io/spring-security/reference/servlet/authentication/password
 
 Explains both authentication and authorization
 https://docs.spring.io/spring-security/site/docs/5.0.x/reference/html/ldap.html
+
+
+LDAP repositories for role extraction
+https://docs.spring.io/spring-data/ldap/reference/repositories/introduction.html
