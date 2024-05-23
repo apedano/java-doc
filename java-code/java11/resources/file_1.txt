@@ -1,0 +1,22 @@
+static String filePath = System.getProperty("user.dir") + "/src/main/resources/";
+    static String file_1 = filePath + "file_1.txt";
+
+    /**
+     * Files.readString() and .writeString()
+     */
+    public static void main(String[] args) throws IOException {
+
+        // reading files is much easier now
+        // not to be used with huge files
+        Path path = Paths.get(file_1);
+        String content = Files.readString(path);
+        print(content);
+
+
+        Path newFile = Paths.get(filePath + "newFile.txt");
+        if(!Files.exists(newFile)) {
+            Files.writeString(newFile, "some str", StandardOpenOption.CREATE);
+        } else {
+            Files.writeString(newFile, "some str", StandardOpenOption.TRUNCATE_EXISTING);
+        }
+    }
