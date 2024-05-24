@@ -3,6 +3,13 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/java-doc.iml" filepath="$PROJECT_DIR$/.idea/java-doc.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java10/java10.iml" filepath="$PROJECT_DIR$/java-code/java10/java10.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java11/java11.iml" filepath="$PROJECT_DIR$/java-code/java11/java11.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java12/java12.iml" filepath="$PROJECT_DIR$/java-code/java12/java12.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java16/java16.iml" filepath="$PROJECT_DIR$/java-code/java16/java16.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java21/java21.iml" filepath="$PROJECT_DIR$/java-code/java21/java21.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java8/java8.iml" filepath="$PROJECT_DIR$/java-code/java8/java8.iml" />
+      <module fileurl="file://$PROJECT_DIR$/java-code/java9/java9.iml" filepath="$PROJECT_DIR$/java-code/java9/java9.iml" />
     </modules>
   </component>
 </project>
